@@ -1,4 +1,6 @@
 import tkinter as tk
+import sys
+from os import name as os_name
 
 # Colores
 INDIGO_DYE = "#08415c"
@@ -11,9 +13,9 @@ LIGHT_GRAY = "#f8f9fa"
 MEDIUM_GRAY = "#dee2e6"
 DARK_GRAY = "#6c757d"
 
-# Función para detectar fuentes sin crear ventana
+# Función para detectar fuentes del sistema
 def get_system_font():
-    """Detecta la mejor fuente para el sistema sin crear ventana"""
+    """Detecta la mejor fuente para el sistema sin crear una ventana."""
     try:
         temp_root = tk.Tk()
         temp_root.withdraw()
@@ -35,6 +37,7 @@ FONT_SECONDARY = "Arial"
 
 # Tamaños de fuente
 FONT_SIZE_TITLE = 18
+FONT_SIZE_LARGE = 16
 FONT_SIZE_SUBTITLE = 12
 FONT_SIZE_NORMAL = 11
 FONT_SIZE_SMALL = 10
@@ -59,23 +62,27 @@ BUTTON_STYLE_PRIMARY = {
     "bd": 0, 
     "cursor": "hand2",
     "activebackground": INDIGO_DYE,
-    "padx": 15,
-    "pady": 10
+    "activeforeground": WHITE
 }
 
 BUTTON_STYLE_SECONDARY = {
     "bg": WHITE, 
     "fg": BLUE_MUNSELL, 
-    "font": (FONT_PRIMARY, FONT_SIZE_SMALL),
+    "font": (FONT_PRIMARY, FONT_SIZE_NORMAL, "bold"),
     "relief": 'flat', 
-    "bd": 0, 
+    "bd": 1, 
     "cursor": "hand2",
-    "activebackground": TEA_ROSE
+    "activebackground": LIGHT_GRAY,
+    "activeforeground": INDIGO_DYE
 }
 
-# Estilos para elementos redondeados
-ROUNDED_STYLE = {
-    "borderwidth": 0,
-    "relief": "flat",
-    "bg": WHITE
+# Estilo para los botones de la barra de navegación
+NAVBAR_BUTTON_STYLE = {
+    "bg": BLUE_MUNSELL,
+    "fg": WHITE,
+    "font": (FONT_PRIMARY, FONT_SIZE_NORMAL, "bold"),
+    "relief": 'flat',
+    "bd": 0,
+    "activebackground": INDIGO_DYE,
+    "activeforeground": WHITE
 }

@@ -5,11 +5,12 @@ from PIL import Image, ImageTk
 from pathlib import Path
 import json
 
-# Importación de la configuración
+# Importación de la configuración y la nueva ventana principal
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 from config import *
+from src.ui.main_window import MainWindow
 
 # Definir la ruta del archivo de sesión
 SESSION_FILE = Path(__file__).parent.parent / "session.json"
@@ -39,7 +40,7 @@ class LoginWindow:
         shadow_frame.place(relx=0.5, rely=0.5, anchor='center', width=404, height=504)
         shadow_frame.lower(main_frame)
 
-        # Logo: Se coloca el logo directamente en el main_frame
+        # Logo
         image_path = Path(__file__).parent.parent / "assets" / "logoSinMarca.png"
         try:
             img = Image.open(image_path)
@@ -48,7 +49,7 @@ class LoginWindow:
 
             logo_label = tk.Label(main_frame, image=self.logo_image, bg=WHITE)
             logo_label.image = self.logo_image
-            logo_label.pack(pady=(20, 0)) # Se usa pack para que se posicione bien arriba
+            logo_label.pack(pady=(20, 0))
             
         except FileNotFoundError:
             logo_label = tk.Label(main_frame, text="🏗️", font=(FONT_PRIMARY, 48, "normal"), bg=WHITE)
@@ -203,8 +204,7 @@ class LoginWindow:
                         # Si hay un token, intenta autenticar
                         self.supabase_client.auth.session = access_token
                         messagebox.showinfo("Sesión", "¡Sesión iniciada automáticamente!")
-                        # Aquí puedes llamar a una función para abrir la ventana principal de la app
-                        self.master.destroy() 
+                        self.on_login_success() 
             except (IOError, json.JSONDecodeError) as e:
                 print(f"Error al leer el archivo de sesión: {e}")
 
@@ -223,6 +223,13 @@ class LoginWindow:
             
     def on_leave(self, e, button, bg, fg):
         button.config(background=bg, foreground=fg)
+    
+    def on_login_success(self):
+        """Maneja el inicio de sesión exitoso y abre la ventana principal."""
+        self.master.destroy()
+        root = tk.Tk()
+        app = MainWindow(root, self.supabase_client)
+        root.mainloop()
 
     def login(self):
         email = self.email_var.get().strip()
@@ -239,7 +246,7 @@ class LoginWindow:
                 messagebox.showinfo("Éxito", "¡Inicio de sesión exitoso!")
                 if self.remember_me_var.get():
                     self.save_session(auth_response.session.access_token)
-                self.master.destroy()
+                self.on_login_success()
             else:
                 messagebox.showerror("Error", "Credenciales incorrectas.")
         except Exception as e:
