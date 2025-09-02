@@ -1,0 +1,21 @@
+Variables de entorno y archivos de configuración
+.env
+config.pyc
+
+Archivos de caché y compilados de Python
+pycache/
+*.pyc
+*.pyo
+*.pyd
+
+Archivos de sesión local
+session.json
+
+Sistema operativo y archivos de editor (ocultos)
+.DS_Store
+.vscode/
+Thumbs.db
+
+Paquetes y entornos virtuales
+venv/
+env/
