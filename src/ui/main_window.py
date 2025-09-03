@@ -1,6 +1,10 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 from supabase import Client
+import logging
+from postgrest.exceptions import APIError
+import requests
+from src.services.auth_service import AuthService
 
 # Importación de la configuración
 import sys
@@ -8,10 +12,18 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 from config import *
 
+# Configuración básica de logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 class MainWindow:
-    def __init__(self, master, supabase_client: Client):
+    def __init__(self, master, supabase_client: Client, auth_service: AuthService, app_state):
         self.master = master
         self.supabase_client = supabase_client
+        self.auth_service = auth_service
+        self.app_state = app_state
+        
+        # Manejo del cierre con la X
+        self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
         
         # Configuración de la ventana principal
         self.master.title("Administrador de Proyectos")
@@ -53,6 +65,11 @@ class MainWindow:
 
         # Mostrar la vista por defecto
         self.show_proyectos_view()
+    
+    def on_closing(self):
+        """Maneja el cierre con la X de la ventana."""
+        self.app_state['is_closing'] = True
+        self.master.destroy()
         
     def _hide_all_views(self):
         """Oculta todos los frames de vista."""
@@ -74,14 +91,18 @@ class MainWindow:
         self.areas_view.pack(fill=tk.BOTH, expand=True)
         
     def logout(self):
-        """Cierra la sesión del usuario."""
+        """Maneja el cierre de sesión del usuario."""
         if messagebox.askyesno("Cerrar Sesión", "¿Estás seguro que quieres cerrar la sesión?"):
-            self.supabase_client.auth.sign_out()
-            self.master.destroy()
-            
-            # TODO: Reiniciar la app a la ventana de login
-            
-            messagebox.showinfo("Sesión Cerrada", "Has cerrado la sesión con éxito.")
+            try:
+                # Llama al método de logout del servicio de autenticación
+                self.auth_service.logout()
+                messagebox.showinfo("Sesión Cerrada", "Has cerrado sesión con éxito.")
+                
+                # Cierra la ventana actual (el reinicio se maneja en main.py)
+                self.master.destroy()
+                
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo cerrar la sesión: {e}")
 
     def create_proyectos_view(self):
         """Crea los widgets para la vista de proyectos."""
@@ -98,22 +119,18 @@ class MainWindow:
         """Crea los widgets para la vista de materiales."""
         title_label = tk.Label(self.materiales_view, text="Administración de Materiales", font=(FONT_PRIMARY, FONT_SIZE_LARGE, "bold"), fg=INDIGO_DYE, bg=WHITE)
         title_label.pack(pady=20)
-        # Aquí irán los widgets para administrar materiales
         
     def create_areas_view(self):
         """Crea los widgets para la vista de áreas."""
         title_label = tk.Label(self.areas_view, text="Administración de Áreas", font=(FONT_PRIMARY, FONT_SIZE_LARGE, "bold"), fg=INDIGO_DYE, bg=WHITE)
         title_label.pack(pady=20)
-        # Aquí irán los widgets para administrar áreas
         
     def load_proyectos(self):
         """Carga la lista de proyectos desde Supabase y la muestra."""
-        # Limpiar la lista actual
         for widget in self.proyectos_list_frame.winfo_children():
             widget.destroy()
 
         try:
-            # Consultar todos los proyectos
             response = self.supabase_client.table("proyectos").select("*").execute()
             proyectos = response.data
             
@@ -134,13 +151,18 @@ class MainWindow:
                     btn_abrir = tk.Button(proyecto_frame, text="Ver Detalles", command=lambda p=proyecto: self.open_proyecto(p), **BUTTON_STYLE_PRIMARY)
                     btn_abrir.pack(side=tk.RIGHT)
                     
+        except APIError as e:
+            logging.error(f"Error de Supabase API: {e}")
+            messagebox.showerror("Error de base de datos", "No se pudieron cargar los proyectos. Intenta de nuevo más tarde.")
+        except requests.exceptions.ConnectionError:
+            logging.error("Error de conexión a la red. No se pudo conectar a Supabase.")
+            messagebox.showerror("Error de conexión", "No se pudo conectar al servidor. Revisa tu conexión a internet.")
         except Exception as e:
-            messagebox.showerror("Error", f"No se pudieron cargar los proyectos: {e}")
-
+            logging.error(f"Error inesperado al cargar proyectos: {e}", exc_info=True)
+            messagebox.showerror("Error", f"Ocurrió un error inesperado: {e}")
+    
     def create_new_proyecto(self):
-        # Esta es una función de marcador de posición para el próximo paso
         messagebox.showinfo("Crear Proyecto", "Aquí se abrirá la ventana o vista para crear un nuevo proyecto.")
         
     def open_proyecto(self, proyecto):
-        # Esta es una función de marcador de posición para el próximo paso
         messagebox.showinfo("Abrir Proyecto", f"Abriendo los detalles del proyecto: {proyecto['nombre_proyecto']}")

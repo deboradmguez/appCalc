@@ -3,22 +3,23 @@ from tkinter import messagebox
 from supabase import Client
 from PIL import Image, ImageTk
 from pathlib import Path
-import json
+import logging
 
-# Importación de la configuración y la nueva ventana principal
+# Importación de la configuración
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 from config import *
-from src.ui.main_window import MainWindow
-
-# Definir la ruta del archivo de sesión
-SESSION_FILE = Path(__file__).parent.parent / "session.json"
 
 class LoginWindow:
-    def __init__(self, master, supabase_client: Client):
+    def __init__(self, master, supabase_client: Client, auth_service, app_state):
         self.master = master
         self.supabase_client = supabase_client
+        self.auth_service = auth_service
+        self.app_state = app_state
+        
+        # Conectamos el cierre de la ventana con nuestra función
+        self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
         
         # Configuración ventana
         self.master.configure(bg=INDIGO_DYE)
@@ -31,210 +32,96 @@ class LoginWindow:
         self.is_login_mode = True # Modo inicial: login
 
         # Frame principal
+        # Usamos pack para un diseño más robusto y predecible
         main_frame = tk.Frame(self.master, bg=WHITE, relief='flat', 
                              highlightbackground=BLUE_MUNSELL, highlightthickness=2)
-        main_frame.place(relx=0.5, rely=0.5, anchor='center', width=400, height=500)
-        
-        # Sombra
-        shadow_frame = tk.Frame(self.master, bg=MEDIUM_GRAY)
-        shadow_frame.place(relx=0.5, rely=0.5, anchor='center', width=404, height=504)
-        shadow_frame.lower(main_frame)
+        main_frame.pack(padx=50, pady=50, fill=tk.BOTH, expand=True)
 
-        # Logo
-        image_path = Path(__file__).parent.parent / "assets" / "logoSinMarca.png"
+        # Usamos un frame interno para centrar los elementos
+        content_frame = tk.Frame(main_frame, bg=WHITE)
+        content_frame.pack(pady=20)
+        
+        # Cargar logo
         try:
-            img = Image.open(image_path)
-            img = img.resize((120, 120), Image.LANCZOS)
-            self.logo_image = ImageTk.PhotoImage(img)
-
-            logo_label = tk.Label(main_frame, image=self.logo_image, bg=WHITE)
-            logo_label.image = self.logo_image
-            logo_label.pack(pady=(20, 0))
+            logo_path = Path(__file__).parent.parent / "assets" / "logo.png"
+            self.logo_img = Image.open(logo_path)
+            self.logo_img = self.logo_img.resize((150, 150))
+            self.logo_photo = ImageTk.PhotoImage(self.logo_img)
             
+            logo_label = tk.Label(content_frame, image=self.logo_photo, bg=WHITE)
+            logo_label.pack(pady=(20, 10))
         except FileNotFoundError:
-            logo_label = tk.Label(main_frame, text="🏗️", font=(FONT_PRIMARY, 48, "normal"), bg=WHITE)
-            logo_label.pack(pady=(20, 0))
-
-        # Frames para el formulario de login y registro
-        self.login_frame = tk.Frame(main_frame, bg=WHITE)
-        self.signup_frame = tk.Frame(main_frame, bg=WHITE)
-        
-        self.create_login_widgets(self.login_frame)
-        self.create_signup_widgets(self.signup_frame)
-        
-        # Iniciar con el modo login
-        self.show_login_mode()
-        
-        # Comprobar sesión guardada al iniciar
-        self.check_saved_session()
-        
-    def create_login_widgets(self, parent_frame):
-        # Email
-        email_label = tk.Label(parent_frame, text="Email", font=(FONT_PRIMARY, FONT_SIZE_SMALL, "bold"), fg=INDIGO_DYE, bg=WHITE, anchor='w')
-        email_label.pack(fill='x', pady=(0, 5))
-        
-        email_container = tk.Frame(parent_frame, bg=LIGHT_GRAY, height=40)
-        email_container.pack(fill='x', pady=(0, 15))
-        email_container.pack_propagate(False)
-        
-        self.email_entry_login = tk.Entry(email_container, textvariable=self.email_var, **ENTRY_STYLE)
-        self.email_entry_login.pack(fill='both', expand=True, padx=12, pady=8)
-        
-        # Contraseña
-        password_label = tk.Label(parent_frame, text="Contraseña", font=(FONT_PRIMARY, FONT_SIZE_SMALL, "bold"), fg=INDIGO_DYE, bg=WHITE, anchor='w')
-        password_label.pack(fill='x', pady=(0, 5))
-        
-        password_container = tk.Frame(parent_frame, bg=LIGHT_GRAY, height=40)
-        password_container.pack(fill='x', pady=(0, 15))
-        password_container.pack_propagate(False)
-        
-        self.password_entry_login = tk.Entry(password_container, textvariable=self.password_var, show="•", **ENTRY_STYLE)
-        self.password_entry_login.pack(fill='both', expand=True, padx=12, pady=8)
-
-        # Mantener sesión iniciada
-        remember_me_check = tk.Checkbutton(parent_frame, text="Mantener sesión iniciada", variable=self.remember_me_var,
-                                            bg=WHITE, activebackground=WHITE, fg=DARK_GRAY,
-                                            font=(FONT_PRIMARY, FONT_SIZE_SMALL), selectcolor=WHITE)
-        remember_me_check.pack(pady=(0, 20))
-
-        # Botón login
-        login_btn = tk.Button(parent_frame, text="Iniciar Sesión", command=self.login, **BUTTON_STYLE_PRIMARY)
-        login_btn.pack(fill='x', pady=(0, 10))
-        
-        # Separador para "o" y botón de registro
-        separator_frame = tk.Frame(parent_frame, bg=WHITE)
-        separator_frame.pack(fill='x', pady=5)
-        
-        tk.Frame(separator_frame, height=1, bg=MEDIUM_GRAY).place(relx=0, rely=0.5, relwidth=0.4, anchor='w')
-        or_label = tk.Label(separator_frame, text="o", bg=WHITE, fg=MEDIUM_GRAY, font=(FONT_PRIMARY, FONT_SIZE_SMALL))
-        or_label.place(relx=0.5, rely=0.5, anchor='center')
-        tk.Frame(separator_frame, height=1, bg=MEDIUM_GRAY).place(relx=1, rely=0.5, relwidth=0.4, anchor='e')
-        
-        signup_btn = tk.Button(parent_frame, text="Crear una cuenta", command=self.toggle_mode, **BUTTON_STYLE_SECONDARY)
-        signup_btn.pack(fill='x', pady=(5, 0))
-        
-        # Ligar la tecla Enter
-        self.email_entry_login.bind('<Return>', lambda event: self.login())
-        self.password_entry_login.bind('<Return>', lambda event: self.login())
-        
-        # Efectos hover
-        login_btn.bind("<Enter>", lambda e: self.on_enter(e, login_btn, INDIGO_DYE, WHITE))
-        login_btn.bind("<Leave>", lambda e: self.on_leave(e, login_btn, BLUE_MUNSELL, WHITE))
-        signup_btn.bind("<Enter>", lambda e: self.on_enter(e, signup_btn, TEA_ROSE, BLUE_MUNSELL))
-        signup_btn.bind("<Leave>", lambda e: self.on_leave(e, signup_btn, WHITE, BLUE_MUNSELL))
-
-    def create_signup_widgets(self, parent_frame):
-        # Email
-        email_label = tk.Label(parent_frame, text="Email", font=(FONT_PRIMARY, FONT_SIZE_SMALL, "bold"), fg=INDIGO_DYE, bg=WHITE, anchor='w')
-        email_label.pack(fill='x', pady=(0, 5))
-        
-        email_container = tk.Frame(parent_frame, bg=LIGHT_GRAY, height=40)
-        email_container.pack(fill='x', pady=(0, 15))
-        email_container.pack_propagate(False)
-        
-        self.email_entry_signup = tk.Entry(email_container, textvariable=self.email_var, **ENTRY_STYLE)
-        self.email_entry_signup.pack(fill='both', expand=True, padx=12, pady=8)
-        
-        # Contraseña
-        password_label = tk.Label(parent_frame, text="Contraseña", font=(FONT_PRIMARY, FONT_SIZE_SMALL, "bold"), fg=INDIGO_DYE, bg=WHITE, anchor='w')
-        password_label.pack(fill='x', pady=(0, 5))
-        
-        password_container = tk.Frame(parent_frame, bg=LIGHT_GRAY, height=40)
-        password_container.pack(fill='x', pady=(0, 20))
-        password_container.pack_propagate(False)
-        
-        self.password_entry_signup = tk.Entry(password_container, textvariable=self.password_var, show="•", **ENTRY_STYLE)
-        self.password_entry_signup.pack(fill='both', expand=True, padx=12, pady=8)
-
-        # Botón de registro
-        signup_btn = tk.Button(parent_frame, text="Registrarse", command=self.signup, **BUTTON_STYLE_PRIMARY)
-        signup_btn.pack(fill='x', pady=(0, 10))
-
-        # Separador para "o" y botón de login
-        separator_frame = tk.Frame(parent_frame, bg=WHITE)
-        separator_frame.pack(fill='x', pady=5)
-        
-        tk.Frame(separator_frame, height=1, bg=MEDIUM_GRAY).place(relx=0, rely=0.5, relwidth=0.4, anchor='w')
-        or_label = tk.Label(separator_frame, text="o", bg=WHITE, fg=MEDIUM_GRAY, font=(FONT_PRIMARY, FONT_SIZE_SMALL))
-        or_label.place(relx=0.5, rely=0.5, anchor='center')
-        tk.Frame(separator_frame, height=1, bg=MEDIUM_GRAY).place(relx=1, rely=0.5, relwidth=0.4, anchor='e')
-        
-        login_btn = tk.Button(parent_frame, text="Ya tengo una cuenta", command=self.toggle_mode, **BUTTON_STYLE_SECONDARY)
-        login_btn.pack(fill='x', pady=(5, 0))
-        
-        # Ligar la tecla Enter
-        self.email_entry_signup.bind('<Return>', lambda event: self.signup())
-        self.password_entry_signup.bind('<Return>', lambda event: self.signup())
-        
-        # Efectos hover
-        signup_btn.bind("<Enter>", lambda e: self.on_enter(e, signup_btn, INDIGO_DYE, WHITE))
-        signup_btn.bind("<Leave>", lambda e: self.on_leave(e, signup_btn, BLUE_MUNSELL, WHITE))
-        login_btn.bind("<Enter>", lambda e: self.on_enter(e, login_btn, TEA_ROSE, BLUE_MUNSELL))
-        login_btn.bind("<Leave>", lambda e: self.on_leave(e, login_btn, WHITE, BLUE_MUNSELL))
-
-    def show_login_mode(self):
-        self.is_login_mode = True
-        self.signup_frame.pack_forget()
-        self.login_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        self.master.title("Iniciar Sesión")
-        self.email_entry_login.focus_set()
-    
-    def show_signup_mode(self):
-        self.is_login_mode = False
-        self.login_frame.pack_forget()
-        self.signup_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        self.master.title("Registrarse")
-        self.email_entry_signup.focus_set()
-
-    def toggle_mode(self):
-        if self.is_login_mode:
-            self.show_signup_mode()
-        else:
-            self.show_login_mode()
-
-    def check_saved_session(self):
-        """Intenta cargar la sesión guardada y autenticar con el token."""
-        if SESSION_FILE.exists():
-            try:
-                with open(SESSION_FILE, 'r') as f:
-                    session_data = json.load(f)
-                    access_token = session_data.get("access_token")
-                    
-                    if access_token:
-                        # Si hay un token, intenta autenticar
-                        self.supabase_client.auth.session = access_token
-                        messagebox.showinfo("Sesión", "¡Sesión iniciada automáticamente!")
-                        self.on_login_success() 
-            except (IOError, json.JSONDecodeError) as e:
-                print(f"Error al leer el archivo de sesión: {e}")
-
-    def save_session(self, token):
-        """Guarda el token de sesión en un archivo local."""
-        if self.remember_me_var.get():
-            session_data = {"access_token": token}
-            try:
-                with open(SESSION_FILE, 'w') as f:
-                    json.dump(session_data, f)
-            except IOError as e:
-                print(f"Error al guardar el archivo de sesión: {e}")
-
-    def on_enter(self, e, button, bg, fg):
-        button.config(background=bg, foreground=fg)
+            logging.error("No se encontró el archivo de logo. Asegúrate de que assets/logo.png existe.")
             
-    def on_leave(self, e, button, bg, fg):
-        button.config(background=bg, foreground=fg)
-    
-    def on_login_success(self):
-        """Maneja el inicio de sesión exitoso y abre la ventana principal."""
+        # Título
+        self.title_label = tk.Label(content_frame, text="Iniciar Sesión", font=(FONT_PRIMARY, FONT_SIZE_TITLE, "bold"), fg=INDIGO_DYE, bg=WHITE)
+        self.title_label.pack(pady=(0, 10))
+
+        # Subtítulo
+        self.subtitle_label = tk.Label(content_frame, text="Bienvenido de nuevo.", font=(FONT_PRIMARY, FONT_SIZE_SUBTITLE), fg=DARK_GRAY, bg=WHITE)
+        self.subtitle_label.pack(pady=(0, 20))
+
+        # Campos de entrada
+        self.email_entry = tk.Entry(content_frame, textvariable=self.email_var, **ENTRY_STYLE)
+        self.email_entry.pack(fill=tk.X, padx=30, pady=(0, 10))
+        self.email_entry.insert(0, "Email")
+        self.email_entry.bind("<FocusIn>", self.on_entry_focus)
+        self.email_entry.bind("<FocusOut>", self.on_entry_unfocus)
+        
+        self.password_entry = tk.Entry(content_frame, textvariable=self.password_var, show="", **ENTRY_STYLE)
+        self.password_entry.pack(fill=tk.X, padx=30, pady=(0, 20))
+        self.password_entry.insert(0, "Contraseña")
+        self.password_entry.bind("<FocusIn>", self.on_entry_focus)
+        self.password_entry.bind("<FocusOut>", self.on_entry_unfocus)
+
+        # Botones
+        self.login_btn = tk.Button(content_frame, text="Iniciar Sesión", command=self.login, **BUTTON_STYLE_PRIMARY)
+        self.login_btn.pack(fill=tk.X, padx=30)
+        
+        self.toggle_btn = tk.Button(content_frame, text="¿No tienes cuenta? Regístrate aquí.", command=self.toggle_mode, **BUTTON_STYLE_SECONDARY)
+        self.toggle_btn.pack(pady=(10, 0))
+
+        # Checkbox "Recordar sesión"
+        self.remember_me_check = tk.Checkbutton(content_frame, text="Recordar sesión", variable=self.remember_me_var,
+                                               bg=WHITE, fg=DARK_GRAY, selectcolor=WHITE,
+                                               font=(FONT_PRIMARY, FONT_SIZE_SMALL))
+        self.remember_me_check.pack(pady=10)
+
+    def on_closing(self):
+        self.app_state['is_closing'] = True
         self.master.destroy()
-        root = tk.Tk()
-        app = MainWindow(root, self.supabase_client)
-        root.mainloop()
+
+    def on_entry_focus(self, event):
+        if event.widget.get() in ["Email", "Contraseña"]:
+            event.widget.delete(0, tk.END)
+        if event.widget == self.password_entry:
+            event.widget.config(show="*")
+
+    def on_entry_unfocus(self, event):
+        if not event.widget.get():
+            if event.widget == self.email_entry:
+                event.widget.insert(0, "Email")
+            elif event.widget == self.password_entry:
+                event.widget.insert(0, "Contraseña")
+                event.widget.config(show="")
+    
+    def toggle_mode(self):
+        self.is_login_mode = not self.is_login_mode
+        if self.is_login_mode:
+            self.title_label.config(text="Iniciar Sesión")
+            self.subtitle_label.config(text="Bienvenido de nuevo.")
+            self.login_btn.config(text="Iniciar Sesión", command=self.login)
+            self.toggle_btn.config(text="¿No tienes cuenta? Regístrate aquí.")
+        else:
+            self.title_label.config(text="Registrarse")
+            self.subtitle_label.config(text="Crea tu cuenta.")
+            self.login_btn.config(text="Registrarse", command=self.signup)
+            self.toggle_btn.config(text="¿Ya tienes cuenta? Inicia sesión aquí.")
 
     def login(self):
         email = self.email_var.get().strip()
         password = self.password_var.get()
-        
+
         if not email or not password:
             messagebox.showerror("Error", "Por favor, ingresa tu email y contraseña.")
             return
@@ -245,8 +132,8 @@ class LoginWindow:
             if auth_response:
                 messagebox.showinfo("Éxito", "¡Inicio de sesión exitoso!")
                 if self.remember_me_var.get():
-                    self.save_session(auth_response.session.access_token)
-                self.on_login_success()
+                    self.auth_service.save_session(auth_response.session.refresh_token)
+                self.master.destroy()
             else:
                 messagebox.showerror("Error", "Credenciales incorrectas.")
         except Exception as e:
@@ -270,3 +157,7 @@ class LoginWindow:
                 messagebox.showerror("Error", "No se pudo crear la cuenta.")
         except Exception as e:
             messagebox.showerror("Error", f"Error de registro: {e}")
+
+    def show_login_mode(self):
+        self.is_login_mode = True
+        self.toggle_mode()
