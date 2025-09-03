@@ -1,157 +1,70 @@
-"""
-Main.py - Punto de entrada de la aplicación
-Soluciona el problema de inicialización de CustomTkinter
-"""
+# src/ui/main_window.py (Corregido)
 
-import sys
-import logging
-from pathlib import Path
+import customtkinter as ctk
+from tkinter import messagebox
 
-# Configurar el path para importaciones
-sys.path.append(str(Path(__file__).resolve().parent))
+from src.ui.components.sidebar import Sidebar
+from src.ui.pages.proyectos_page import ProyectosPage
+from src.ui.pages.project_detail_page import ProjectDetailPage
+from src.ui.pages.areas_view import AreasView
+from src.ui.pages.materiales_view import MaterialesView
+from src.ui.pages.configuracion_view import ConfiguracionView
+from src.ui.windows.proyecto_form_window import ProyectoFormWindow
 
-# Configurar logging
-logging.basicConfig(
-    level=logging.INFO, 
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+class MainWindow(ctk.CTkFrame):
+    def __init__(self, master, **kwargs):
+        super().__init__(master, **kwargs)
+        
+        self.master = master
+        self.supabase_client = master.supabase_client
+        self.auth_service = master.auth_service
+        self.current_page = None 
+        
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=0)
 
-def main():
-    """Función principal de la aplicación."""
-    try:
-        # 1. Primero inicializar CustomTkinter
-        import customtkinter as ctk
+        commands = {
+            "Proyectos": self.show_proyectos_page,
+            "Materiales": self.show_materiales_page,
+            "Areas": self.show_areas_page,
+            "Configuración": self.show_configuracion_page
+        }
         
-        # Configurar CustomTkinter ANTES que nada
-        ctk.set_appearance_mode("dark")  # "light", "dark", "system"
-        ctk.set_default_color_theme("blue")  # "blue", "green", "dark-blue"
-        
-        # 2. Crear ventana temporal para inicializar el sistema
-        temp_root = ctk.CTk()
-        temp_root.withdraw()  # Ocultar inmediatamente
-        
-        # 3. Ahora es seguro importar módulos que usen CTkFont
-        from src.ui.login_window import LoginWindow
-        from src.ui.main_window import MainWindow
-        from src.services.auth_service import AuthService
-        from src.database.supabase_client import get_supabase_client
-        
-        # 4. Destruir ventana temporal
-        temp_root.destroy()
-        
-        logging.info("Inicializando aplicación...")
-        
-        # 5. Estado de la aplicación
-        app_state = {'is_closing': False}
-        
-        # 6. Conectar con Supabase
-        try:
-            supabase_client = get_supabase_client()
-            auth_service = AuthService(supabase_client)
-            logging.info("Conexión con Supabase establecida")
-        except ValueError as e:
-            logging.error(f"Error de conexión con Supabase: {e}")
-            return 1
-        except Exception as e:
-            logging.error(f"Error inesperado al conectar: {e}")
-            return 1
-            
-        # 7. Bucle principal de la aplicación
-        while not app_state['is_closing']:
-            try:
-                # Crear ventana principal
-                root = ctk.CTk()
-                root.title("Administrador de Proyectos")
-                
-                # Configurar la ventana
-                root.geometry("1200x800")
-                root.minsize(800, 600)
-                
-                # Intentar maximizar
-                try:
-                    root.state('zoomed')  # Windows
-                except:
-                    try:
-                        root.attributes('-zoomed', True)  # Linux
-                    except:
-                        pass  # macOS
-                
-                # Protocolo de cierre
-                def on_closing():
-                    app_state['is_closing'] = True
-                    root.quit()
-                    root.destroy()
-                
-                root.protocol("WM_DELETE_WINDOW", on_closing)
-                
-                # Determinar ventana a mostrar
-                current_window = None
-                
-                try:
-                    session = auth_service.load_session()
-                    if session and auth_service.validate_session(session):
-                        logging.info("Sesión válida, cargando ventana principal")
-                        current_window = MainWindow(root, supabase_client, auth_service, app_state)
-                    else:
-                        logging.info("Sin sesión válida, mostrando login")
-                        current_window = LoginWindow(root, supabase_client, auth_service, app_state)
-                        
-                except Exception as e:
-                    logging.error(f"Error al validar sesión: {e}")
-                    current_window = LoginWindow(root, supabase_client, auth_service, app_state)
-                
-                # Iniciar bucle de eventos
-                logging.info("Iniciando interfaz gráfica")
-                root.mainloop()
-                
-                # Si no estamos cerrando, reiniciar
-                if not app_state['is_closing']:
-                    logging.info("Reiniciando aplicación...")
-                    continue
-                else:
-                    break
-                    
-            except KeyboardInterrupt:
-                logging.info("Aplicación interrumpida por el usuario")
-                app_state['is_closing'] = True
-                break
-                
-            except Exception as e:
-                logging.error(f"Error en el bucle principal: {e}")
-                import traceback
-                traceback.print_exc()
-                
-                # Preguntar si reiniciar
-                try:
-                    import tkinter.messagebox as msgbox
-                    respuesta = msgbox.askyesno(
-                        "Error",
-                        f"Error inesperado: {e}\n\n¿Deseas reiniciar la aplicación?"
-                    )
-                    if not respuesta:
-                        app_state['is_closing'] = True
-                        break
-                except:
-                    # Si no podemos mostrar el diálogo, cerrar
-                    app_state['is_closing'] = True
-                    break
-        
-        logging.info("Aplicación cerrada correctamente")
-        return 0
-        
-    except ImportError as e:
-        logging.error(f"Error de importación: {e}")
-        print("Error: No se pudieron importar los módulos necesarios.")
-        print("Verifica que todas las dependencias estén instaladas.")
-        return 1
-        
-    except Exception as e:
-        logging.error(f"Error crítico: {e}")
-        import traceback
-        traceback.print_exc()
-        return 1
+        self.sidebar_frame = Sidebar(self, commands=commands)
+        self.sidebar_frame.grid(row=0, column=0, sticky="nsw")
 
+        self.view_container = ctk.CTkFrame(self, corner_radius=0)
+        self.view_container.grid(row=0, column=1, sticky="nsew")
+        
+        self.show_proyectos_page()
 
-if __name__ == "__main__":
-    exit_code = main()
-    sys.exit(exit_code)
+    def _switch_page(self, page_class, **kwargs):
+        if self.current_page:
+            self.current_page.destroy()
+        
+        # --- LA CORRECCIÓN ESTÁ AQUÍ ---
+        # Pasamos master_app (que es la ventana principal 'App') a todas las páginas.
+        # Las páginas podrán acceder a supabase_client a través de master_app.
+        self.current_page = page_class(self.view_container, master_app=self.master, **kwargs)
+        self.current_page.pack(fill="both", expand=True, padx=20, pady=20)
+
+    def create_new_proyecto(self):
+        form = ProyectoFormWindow(self.master, callback=self.show_proyectos_page)
+        form.grab_set()
+
+    def logout(self):
+        if messagebox.askyesno("Cerrar Sesión", "¿Estás seguro?"):
+            self.auth_service.logout()
+            self.master.show_login_window()
+
+    def show_proyectos_page(self):
+        self._switch_page(ProyectosPage, on_create_new=self.create_new_proyecto, on_view_details=self.show_project_detail_page)
+    def show_project_detail_page(self, proyecto):
+        self._switch_page(ProjectDetailPage, proyecto=proyecto, on_back=self.show_proyectos_page)
+    def show_materiales_page(self):
+        self._switch_page(MaterialesView)
+    def show_areas_page(self):
+        self._switch_page(AreasView)
+    def show_configuracion_page(self):
+        self._switch_page(ConfiguracionView, on_logout=self.logout)
