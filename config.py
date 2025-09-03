@@ -1,19 +1,19 @@
 import tkinter as tk
-import sys
-from os import name as os_name
 
-# Colores
-INDIGO_DYE = "#08415c"
-PERSIAN_RED = "#cc2936"
-TEA_ROSE = "#ebbab9"
-BLUE_MUNSELL = "#388697"
-AQUAMARINE = "#b5ffe1"
+# --- Paleta de Colores Moderna (Tema Oscuro) ---
+GRAPHITE = "#2b2b2b"      # Fondo principal oscuro
+DARK_GRAY = "#3c3f41"     # Fondo secundario para widgets
+MEDIUM_GRAY = "#555555"   # Bordes y elementos inactivos
+LIGHT_GRAY_TEXT = "#bbbbbb" # Texto secundario o de ayuda
+NEAR_WHITE = "#f5f5f5"     # Texto principal
+ACCENT_CYAN = "#00a8cc"    # Color primario para botones y highlights
+ACCENT_CYAN_DARK = "#008aab" # Para el efecto "active" del botón
+SUCCESS_COLOR = "#2ecc71"
+ERROR_COLOR = "#e74c3c"
 WHITE = "#ffffff"
-LIGHT_GRAY = "#f8f9fa"
-MEDIUM_GRAY = "#dee2e6"
-DARK_GRAY = "#6c757d"
 
-# Función para detectar fuentes del sistema
+# --- Fuentes ---
+# La función para detectar la fuente del sistema es excelente, la mantenemos.
 def get_system_font():
     """Detecta la mejor fuente para el sistema sin crear una ventana."""
     try:
@@ -31,58 +31,75 @@ def get_system_font():
     except:
         return "Arial"
 
-# Fuentes
 FONT_PRIMARY = get_system_font()
-FONT_SECONDARY = "Arial"
-
-# Tamaños de fuente
-FONT_SIZE_TITLE = 18
+# Tamaños de fuente ajustados para una mejor jerarquía visual
+FONT_SIZE_TITLE = 20
 FONT_SIZE_LARGE = 16
-FONT_SIZE_SUBTITLE = 12
-FONT_SIZE_NORMAL = 11
+FONT_SIZE_NORMAL = 12
 FONT_SIZE_SMALL = 10
 
-# Estilos predefinidos para los campos de entrada
+# --- Estilos de Widgets ---
+
+# Estilo para campos de entrada (Entry)
 ENTRY_STYLE = {
     "font": (FONT_PRIMARY, FONT_SIZE_NORMAL), 
-    "bg": WHITE,  # Fondo blanco para diferenciarse del contenedor gris claro
-    "fg": INDIGO_DYE,
+    "bg": DARK_GRAY,
+    "fg": NEAR_WHITE,
     "relief": 'flat', 
     "bd": 0, 
-    "highlightthickness": 1, # Grosor del borde
-    "highlightcolor": BLUE_MUNSELL, # Color del borde cuando el campo tiene foco
-    "highlightbackground": MEDIUM_GRAY # Color del borde cuando el campo no tiene foco
+    "highlightthickness": 2,
+    "highlightcolor": ACCENT_CYAN,
+    "highlightbackground": MEDIUM_GRAY,
+    "insertbackground": NEAR_WHITE # Color del cursor de texto
 }
 
+# Estilo para botones primarios (Acción principal)
 BUTTON_STYLE_PRIMARY = {
-    "bg": BLUE_MUNSELL, 
+    "bg": ACCENT_CYAN, 
     "fg": WHITE, 
     "font": (FONT_PRIMARY, FONT_SIZE_NORMAL, "bold"),
     "relief": 'flat', 
     "bd": 0, 
     "cursor": "hand2",
-    "activebackground": INDIGO_DYE,
+    "activebackground": ACCENT_CYAN_DARK,
     "activeforeground": WHITE
 }
 
+# Estilo para botones secundarios (Acciones alternativas o "ghost button")
 BUTTON_STYLE_SECONDARY = {
-    "bg": WHITE, 
-    "fg": BLUE_MUNSELL, 
-    "font": (FONT_PRIMARY, FONT_SIZE_NORMAL, "bold"),
+    "bg": DARK_GRAY, 
+    "fg": NEAR_WHITE, 
+    "font": (FONT_PRIMARY, FONT_SIZE_NORMAL),
     "relief": 'flat', 
-    "bd": 1, 
+    "bd": 0, 
     "cursor": "hand2",
-    "activebackground": LIGHT_GRAY,
-    "activeforeground": INDIGO_DYE
+    "activebackground": MEDIUM_GRAY,
+    "activeforeground": WHITE,
+    "highlightthickness": 1,
+    "highlightbackground": MEDIUM_GRAY
 }
 
-# Estilo para los botones de la barra de navegación
+# Estilo para botones de la barra de navegación
 NAVBAR_BUTTON_STYLE = {
-    "bg": BLUE_MUNSELL,
-    "fg": WHITE,
+    "bg": GRAPHITE, # Fondo igual al de la barra para que parezcan integrados
+    "fg": LIGHT_GRAY_TEXT,
     "font": (FONT_PRIMARY, FONT_SIZE_NORMAL, "bold"),
     "relief": 'flat',
     "bd": 0,
-    "activebackground": INDIGO_DYE,
-    "activeforeground": WHITE
+    "cursor": "hand2",
+    "activebackground": DARK_GRAY,
+    "activeforeground": ACCENT_CYAN
+}
+
+# Estilo para Listbox
+LISTBOX_STYLE = {
+    "font": (FONT_PRIMARY, FONT_SIZE_NORMAL),
+    "bg": DARK_GRAY,
+    "fg": NEAR_WHITE,
+    "relief": "flat",
+    "bd": 0,
+    "highlightthickness": 1,
+    "highlightbackground": MEDIUM_GRAY,
+    "selectbackground": ACCENT_CYAN,
+    "selectforeground": WHITE
 }
