@@ -1,91 +1,61 @@
-import tkinter as tk
-from tkinter import ttk
+# notification_system.py (Refactored for CustomTkinter)
 
-# Importación de la configuración
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parents[3]))
-from config import *
+import customtkinter as ctk
+
+# Colores predefinidos que puedes usar. Podrías moverlos a un archivo de configuración.
+SUCCESS_COLOR = "#2a9d8f"
+ERROR_COLOR = "#e76f51"
+WHITE = "#FFFFFF"
 
 class NotificationSystem:
     def __init__(self, parent):
         self.parent = parent
         self.notification_frame = None
-        self.active_notifications = []  # Para llevar un registro de notificaciones activas
+        self.active_notifications = []
 
     def pack_notification_frame(self):
         """
-        Crea y empaqueta el frame de notificaciones.
-        Este método se llama una vez al inicializar la ventana principal.
+        Crea y empaqueta el frame de notificaciones en la parte superior.
         """
-        self.notification_frame = tk.Frame(self.parent, bg=self.parent['bg'])
-        self.notification_frame.pack(side=tk.TOP, fill=tk.X, padx=20, pady=5)
+        # Usamos un CTkFrame que se coloca sobre el resto del contenido
+        self.notification_frame = ctk.CTkFrame(self.parent, fg_color="transparent")
+        self.notification_frame.place(relx=0.98, y=20, anchor="ne")
 
     def show_success(self, message):
-        """
-        Muestra una notificación de éxito.
-        """
         self.show_notification(message, SUCCESS_COLOR, "✓")
 
     def show_error(self, message):
-        """
-        Muestra una notificación de error.
-        """
         self.show_notification(message, ERROR_COLOR, "✕")
 
     def show_notification(self, message, color, icon=None):
-        """
-        Crea y muestra una notificación temporal con diseño mejorado.
-        """
         if self.notification_frame is None:
             self.pack_notification_frame()
 
-        # Crear un frame para la notificación con bordes redondeados (simulados)
         notification_id = len(self.active_notifications)
-        notif_frame = tk.Frame(self.notification_frame, bg=color, relief='flat', height=30)
-        notif_frame.pack(fill='x', pady=2)
-        notif_frame.pack_propagate(False)  # Evitar que el frame se ajuste al contenido
         
-        # Frame interno para mejor control del padding
-        inner_frame = tk.Frame(notif_frame, bg=color)
-        inner_frame.pack(fill='both', expand=True, padx=1, pady=1)
+        # --- Frame de notificación con CTkFrame ---
+        notif_frame = ctk.CTkFrame(self.notification_frame, fg_color=color, corner_radius=6)
+        notif_frame.pack(pady=4, padx=10, fill='x', anchor='e')
         
-        # Icono (si se proporciona)
         if icon:
-            icon_label = tk.Label(inner_frame, text=icon, bg=color, fg=WHITE, 
-                                 font=(FONT_PRIMARY, FONT_SIZE_SMALL, "bold"))
-            icon_label.pack(side=tk.LEFT, padx=(10, 5))
+            icon_label = ctk.CTkLabel(notif_frame, text=icon, font=ctk.CTkFont(size=16, weight="bold"))
+            icon_label.pack(side="left", padx=(10, 5))
         
-        # Mensaje
-        message_label = tk.Label(inner_frame, text=message, bg=color, fg=WHITE, 
-                                font=(FONT_PRIMARY, FONT_SIZE_SMALL), wraplength=400)
-        message_label.pack(side=tk.LEFT, fill='x', expand=True, padx=(0, 10), pady=5)
+        message_label = ctk.CTkLabel(notif_frame, text=message, wraplength=350, justify="left")
+        message_label.pack(side="left", fill='x', expand=True, padx=(0, 10), pady=10)
         
-        # Botón de cerrar (opcional)
-        close_btn = tk.Label(inner_frame, text="×", bg=color, fg=WHITE, 
-                            font=(FONT_PRIMARY, FONT_SIZE_NORMAL, "bold"), cursor="hand2")
-        close_btn.pack(side=tk.RIGHT, padx=(0, 10))
+        close_btn = ctk.CTkLabel(notif_frame, text="×", font=ctk.CTkFont(size=18, weight="bold"), cursor="hand2")
+        close_btn.pack(side="right", padx=(0, 10))
         close_btn.bind("<Button-1>", lambda e: self.remove_notification(notification_id))
         
-        # Agregar a la lista de notificaciones activas
-        notification_data = {
-            'frame': notif_frame,
-            'inner_frame': inner_frame,
-            'message_label': message_label,
-            'close_btn': close_btn,
-            'icon_label': icon_label if icon else None
-        }
-        self.active_notifications.append(notification_data)
+        self.active_notifications.append(notif_frame)
         
-        # Ocultar la notificación después de 3 segundos
         self.parent.after(3000, lambda: self.remove_notification(notification_id))
 
     def remove_notification(self, notification_id):
-        """
-        Elimina una notificación específica.
-        """
         if notification_id < len(self.active_notifications):
-            notification = self.active_notifications[notification_id]
-            notification['frame'].destroy()
-            # Marcar como None para mantener los índices consistentes
+            notif_frame = self.active_notifications[notification_id]
+            # Verificar si el widget todavía existe antes de destruirlo
+            if notif_frame and notif_frame.winfo_exists():
+                notif_frame.destroy()
             self.active_notifications[notification_id] = None

@@ -1,147 +1,321 @@
-import tkinter as tk
+import customtkinter as ctk
 from tkinter import messagebox
-from supabase import Client
-from PIL import Image, ImageTk
+from PIL import Image
 from pathlib import Path
 import logging
-
-# Se importan los nuevos nombres de colores y estilos
-from config import *
+import threading
 
 class LoginWindow:
-    def __init__(self, master, supabase_client: Client, auth_service, app_state):
+    """Ventana de login mejorada usando CustomTkinter."""
+    
+    def __init__(self, master, supabase_client, auth_service, app_state):
         self.master = master
         self.supabase_client = supabase_client
         self.auth_service = auth_service
         self.app_state = app_state
-        
-        self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
-        
-        # --- ESTILOS ACTUALIZADOS ---
-        self.master.configure(bg=GRAPHITE)
-        self.master.resizable(False, False)
-        
-        self.email_var = tk.StringVar()
-        self.password_var = tk.StringVar()
-        self.remember_me_var = tk.BooleanVar()
         self.is_login_mode = True
 
-        main_frame = tk.Frame(self.master, bg=DARK_GRAY, relief='flat', 
-                             highlightbackground=MEDIUM_GRAY, highlightthickness=1)
-        main_frame.pack(padx=50, pady=50, fill=tk.BOTH, expand=True)
-
-        content_frame = tk.Frame(main_frame, bg=DARK_GRAY)
-        content_frame.pack(pady=20, padx=20)
+        # Configurar la ventana principal como ventana de login
+        self.master.title("Iniciar Sesión - Administrador de Proyectos")
+        self.master.geometry("500x700")
+        self.master.resizable(False, False)
         
+        # Centrar la ventana
+        self.center_window()
+        
+        # Variables
+        self.email_var = ctk.StringVar()
+        self.password_var = ctk.StringVar()
+        self.remember_me_var = ctk.BooleanVar()
+
+        # Crear la interfaz
+        self.create_ui()
+        
+        # Configurar el protocolo de cierre
+        self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def center_window(self):
+        """Centra la ventana en la pantalla."""
+        self.master.update_idletasks()
+        width = 500
+        height = 700
+        x = (self.master.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.master.winfo_screenheight() // 2) - (height // 2)
+        self.master.geometry(f"{width}x{height}+{x}+{y}")
+
+    def create_ui(self):
+        """Crea la interfaz de usuario."""
+        # Frame principal con padding
+        main_frame = ctk.CTkFrame(self.master, fg_color="transparent")
+        main_frame.pack(fill="both", expand=True, padx=40, pady=40)
+        
+        # Logo/Imagen
+        self.add_logo(main_frame)
+        
+        # Título y subtítulo
+        self.title_label = ctk.CTkLabel(
+            main_frame, 
+            text="Iniciar Sesión", 
+            font=ctk.CTkFont(size=28, weight="bold")
+        )
+        self.title_label.pack(pady=(20, 5))
+
+        self.subtitle_label = ctk.CTkLabel(
+            main_frame, 
+            text="Bienvenido de nuevo", 
+            font=ctk.CTkFont(size=16),
+            text_color=("gray40", "gray60")
+        )
+        self.subtitle_label.pack(pady=(0, 30))
+        
+        # Campos de entrada
+        self.create_form_fields(main_frame)
+        
+        # Botones
+        self.create_buttons(main_frame)
+
+    def add_logo(self, parent):
+        """Agrega el logo si existe."""
         try:
             logo_path = Path(__file__).parent.parent / "assets" / "logo.png"
-            self.logo_img = Image.open(logo_path)
-            self.logo_img = self.logo_img.resize((150, 150))
-            self.logo_photo = ImageTk.PhotoImage(self.logo_img)
-            
-            logo_label = tk.Label(content_frame, image=self.logo_photo, bg=DARK_GRAY)
-            logo_label.pack(pady=(20, 10))
-        except FileNotFoundError:
-            logging.error("No se encontró el archivo de logo. Asegúrate de que assets/logo.png existe.")
-            
-        self.title_label = tk.Label(content_frame, text="Iniciar Sesión", font=(FONT_PRIMARY, FONT_SIZE_TITLE, "bold"), fg=NEAR_WHITE, bg=DARK_GRAY)
-        self.title_label.pack(pady=(0, 10))
+            if logo_path.exists():
+                logo_image = ctk.CTkImage(
+                    Image.open(logo_path), 
+                    size=(120, 120)
+                )
+                logo_label = ctk.CTkLabel(parent, image=logo_image, text="")
+                logo_label.pack(pady=(10, 0))
+            else:
+                # Logo placeholder si no existe el archivo
+                logo_placeholder = ctk.CTkLabel(
+                    parent,
+                    text="📊",
+                    font=ctk.CTkFont(size=48)
+                )
+                logo_placeholder.pack(pady=(10, 0))
+        except Exception as e:
+            logging.warning(f"No se pudo cargar el logo: {e}")
 
-        self.subtitle_label = tk.Label(content_frame, text="Bienvenido de nuevo.", font=(FONT_PRIMARY, FONT_SIZE_NORMAL), fg=LIGHT_GRAY_TEXT, bg=DARK_GRAY)
-        self.subtitle_label.pack(pady=(0, 20))
-
-        self.email_entry = tk.Entry(content_frame, textvariable=self.email_var, **ENTRY_STYLE)
-        self.email_entry.pack(fill=tk.X, padx=30, pady=(0, 10), ipady=5)
-        self.email_entry.insert(0, "Email")
-        self.email_entry.bind("<FocusIn>", self.on_entry_focus)
-        self.email_entry.bind("<FocusOut>", self.on_entry_unfocus)
+    def create_form_fields(self, parent):
+        """Crea los campos del formulario."""
+        # Campo email
+        self.email_entry = ctk.CTkEntry(
+            parent,
+            textvariable=self.email_var,
+            placeholder_text="📧 Correo electrónico",
+            height=50,
+            font=ctk.CTkFont(size=14)
+        )
+        self.email_entry.pack(fill="x", pady=(0, 15))
         
-        self.password_entry = tk.Entry(content_frame, textvariable=self.password_var, show="", **ENTRY_STYLE)
-        self.password_entry.pack(fill=tk.X, padx=30, pady=(0, 20), ipady=5)
-        self.password_entry.insert(0, "Contraseña")
-        self.password_entry.bind("<FocusIn>", self.on_entry_focus)
-        self.password_entry.bind("<FocusOut>", self.on_entry_unfocus)
+        # Campo contraseña
+        self.password_entry = ctk.CTkEntry(
+            parent,
+            textvariable=self.password_var,
+            placeholder_text="🔒 Contraseña",
+            show="*",
+            height=50,
+            font=ctk.CTkFont(size=14)
+        )
+        self.password_entry.pack(fill="x", pady=(0, 20))
 
-        self.login_btn = tk.Button(content_frame, text="Iniciar Sesión", command=self.login, **BUTTON_STYLE_PRIMARY)
-        self.login_btn.pack(fill=tk.X, padx=30, ipady=8)
+        # Checkbox recordar sesión
+        self.remember_me_check = ctk.CTkCheckBox(
+            parent,
+            text="Recordar mi sesión",
+            variable=self.remember_me_var,
+            font=ctk.CTkFont(size=12)
+        )
+        self.remember_me_check.pack(pady=(0, 20))
+
+    def create_buttons(self, parent):
+        """Crea los botones de acción."""
+        # Botón principal de acción
+        self.action_btn = ctk.CTkButton(
+            parent,
+            text="Iniciar Sesión",
+            command=self.handle_action,
+            height=50,
+            font=ctk.CTkFont(size=16, weight="bold")
+        )
+        self.action_btn.pack(fill="x", pady=(0, 15))
         
-        self.toggle_btn = tk.Button(content_frame, text="¿No tienes cuenta? Regístrate aquí.", command=self.toggle_mode, **BUTTON_STYLE_SECONDARY)
-        self.toggle_btn.pack(fill=tk.X, padx=30, pady=(10, 0), ipady=8)
+        # Botón para alternar modo
+        self.toggle_btn = ctk.CTkButton(
+            parent,
+            text="¿No tienes cuenta? Regístrate aquí",
+            command=self.toggle_mode,
+            fg_color="transparent",
+            text_color=("gray40", "gray60"),
+            hover_color=("gray90", "gray20"),
+            font=ctk.CTkFont(size=12)
+        )
+        self.toggle_btn.pack(fill="x")
 
-        self.remember_me_check = tk.Checkbutton(content_frame, text="Recordar sesión", variable=self.remember_me_var,
-                                               bg=DARK_GRAY, fg=LIGHT_GRAY_TEXT, selectcolor=DARK_GRAY,
-                                               activebackground=DARK_GRAY, activeforeground=NEAR_WHITE,
-                                               font=(FONT_PRIMARY, FONT_SIZE_SMALL))
-        self.remember_me_check.pack(pady=10)
+        # Eventos de teclado
+        self.master.bind('<Return>', lambda e: self.handle_action())
+        self.email_entry.bind('<Return>', lambda e: self.password_entry.focus())
 
-    # El resto de los métodos de la clase (on_closing, on_entry_focus, etc.) no cambian...
-    def on_closing(self):
-        self.app_state['is_closing'] = True
-        self.master.destroy()
-
-    def on_entry_focus(self, event):
-        if event.widget.get() in ["Email", "Contraseña"]:
-            event.widget.delete(0, tk.END)
-        if event.widget == self.password_entry:
-            event.widget.config(show="*")
-
-    def on_entry_unfocus(self, event):
-        if not event.widget.get():
-            if event.widget == self.email_entry:
-                event.widget.insert(0, "Email")
-            elif event.widget == self.password_entry:
-                event.widget.insert(0, "Contraseña")
-                event.widget.config(show="")
-    
     def toggle_mode(self):
+        """Alterna entre modo login y registro."""
         self.is_login_mode = not self.is_login_mode
+        
         if self.is_login_mode:
-            self.title_label.config(text="Iniciar Sesión")
-            self.subtitle_label.config(text="Bienvenido de nuevo.")
-            self.login_btn.config(text="Iniciar Sesión", command=self.login)
-            self.toggle_btn.config(text="¿No tienes cuenta? Regístrate aquí.")
+            self.title_label.configure(text="Iniciar Sesión")
+            self.subtitle_label.configure(text="Bienvenido de nuevo")
+            self.action_btn.configure(text="Iniciar Sesión")
+            self.toggle_btn.configure(text="¿No tienes cuenta? Regístrate aquí")
+            self.remember_me_check.pack(pady=(0, 20))
         else:
-            self.title_label.config(text="Registrarse")
-            self.subtitle_label.config(text="Crea tu cuenta.")
-            self.login_btn.config(text="Registrarse", command=self.signup)
-            self.toggle_btn.config(text="¿Ya tienes cuenta? Inicia sesión aquí.")
+            self.title_label.configure(text="Crear Cuenta")
+            self.subtitle_label.configure(text="Únete a nosotros")
+            self.action_btn.configure(text="Crear Cuenta")
+            self.toggle_btn.configure(text="¿Ya tienes cuenta? Inicia sesión aquí")
+            self.remember_me_check.pack_forget()
+
+    def handle_action(self):
+        """Maneja la acción principal (login o registro)."""
+        if self.is_login_mode:
+            self.login()
+        else:
+            self.signup()
 
     def login(self):
+        """Maneja el proceso de login."""
         email = self.email_var.get().strip()
         password = self.password_var.get()
 
+        # Validación básica
         if not email or not password:
-            messagebox.showerror("Error", "Por favor, ingresa tu email y contraseña.")
+            messagebox.showerror(
+                "Error", 
+                "Por favor, ingresa tu email y contraseña.",
+                parent=self.master
+            )
             return
 
-        try:
-            auth_response = self.supabase_client.auth.sign_in_with_password({"email": email, "password": password})
+        # Validar formato de email básico
+        if "@" not in email or "." not in email:
+            messagebox.showerror(
+                "Error", 
+                "Por favor, ingresa un email válido.",
+                parent=self.master
+            )
+            return
+
+        # Deshabilitar botón durante el proceso
+        self.action_btn.configure(state="disabled", text="Iniciando sesión...")
+        
+        # Ejecutar login en un hilo separado para no bloquear la UI
+        def login_thread():
+            try:
+                auth_response = self.auth_service.login(email, password)
+                
+                # Volver al hilo principal para actualizar la UI
+                self.master.after(0, lambda: self.on_login_success(auth_response))
+                
+            except Exception as e:
+                self.master.after(0, lambda: self.on_login_error(str(e)))
+        
+        threading.Thread(target=login_thread, daemon=True).start()
+
+    def on_login_success(self, auth_response):
+        """Callback ejecutado cuando el login es exitoso."""
+        self.action_btn.configure(state="normal", text="Iniciar Sesión")
+        
+        if auth_response and auth_response.session:
+            # Guardar sesión si se solicitó
+            if self.remember_me_var.get():
+                self.auth_service.save_session(auth_response.session.refresh_token)
             
-            if auth_response:
-                messagebox.showinfo("Éxito", "¡Inicio de sesión exitoso!")
-                if self.remember_me_var.get():
-                    self.auth_service.save_session(auth_response.session.refresh_token)
-                self.master.destroy()
-            else:
-                messagebox.showerror("Error", "Credenciales incorrectas.")
-        except Exception as e:
-            messagebox.showerror("Error", f"Error de inicio de sesión: {e}")
+            messagebox.showinfo(
+                "Éxito", 
+                "¡Inicio de sesión exitoso!",
+                parent=self.master
+            )
+            
+            # Cerrar ventana de login para que main.py cargue la ventana principal
+            self.master.quit()
+        else:
+            messagebox.showerror(
+                "Error", 
+                "No se pudo completar el inicio de sesión.",
+                parent=self.master
+            )
+
+    def on_login_error(self, error_message):
+        """Callback ejecutado cuando hay un error en el login."""
+        self.action_btn.configure(state="normal", text="Iniciar Sesión")
+        
+        # Mensajes de error más amigables
+        if "invalid" in error_message.lower() or "credentials" in error_message.lower():
+            error_msg = "Email o contraseña incorrectos."
+        elif "network" in error_message.lower() or "connection" in error_message.lower():
+            error_msg = "Error de conexión. Verifica tu internet."
+        else:
+            error_msg = "Error al iniciar sesión. Inténtalo de nuevo."
+        
+        messagebox.showerror("Error", error_msg, parent=self.master)
 
     def signup(self):
+        """Maneja el proceso de registro."""
         email = self.email_var.get().strip()
         password = self.password_var.get()
 
+        # Validación básica
         if not email or not password:
-            messagebox.showerror("Error", "Por favor, ingresa un email y contraseña.")
+            messagebox.showerror(
+                "Error", 
+                "Por favor, ingresa un email y contraseña.",
+                parent=self.master
+            )
             return
 
-        try:
-            auth_response = self.supabase_client.auth.sign_up({"email": email, "password": password})
-            
-            if auth_response:
-                messagebox.showinfo("Registro Exitoso", "¡Cuenta creada! Revisa tu email para confirmar.")
-                self.toggle_mode() # Cambiamos a modo login
-            else:
-                messagebox.showerror("Error", "No se pudo crear la cuenta.")
-        except Exception as e:
-            messagebox.showerror("Error", f"Error de registro: {e}")
+        if len(password) < 6:
+            messagebox.showerror(
+                "Error", 
+                "La contraseña debe tener al menos 6 caracteres.",
+                parent=self.master
+            )
+            return
+
+        # Deshabilitar botón durante el proceso
+        self.action_btn.configure(state="disabled", text="Creando cuenta...")
+        
+        def signup_thread():
+            try:
+                auth_response = self.auth_service.signup(email, password)
+                self.master.after(0, lambda: self.on_signup_success(auth_response))
+            except Exception as e:
+                self.master.after(0, lambda: self.on_signup_error(str(e)))
+        
+        threading.Thread(target=signup_thread, daemon=True).start()
+
+    def on_signup_success(self, auth_response):
+        """Callback ejecutado cuando el registro es exitoso."""
+        self.action_btn.configure(state="normal", text="Crear Cuenta")
+        
+        messagebox.showinfo(
+            "Registro Exitoso", 
+            "¡Cuenta creada exitosamente!\n\nRevisa tu email para confirmar tu cuenta.",
+            parent=self.master
+        )
+        
+        # Cambiar a modo login
+        self.toggle_mode()
+
+    def on_signup_error(self, error_message):
+        """Callback ejecutado cuando hay un error en el registro."""
+        self.action_btn.configure(state="normal", text="Crear Cuenta")
+        
+        if "already" in error_message.lower():
+            error_msg = "Este email ya está registrado."
+        else:
+            error_msg = f"Error al crear la cuenta: {error_message}"
+        
+        messagebox.showerror("Error", error_msg, parent=self.master)
+
+    def on_closing(self):
+        """Maneja el cierre de la ventana."""
+        self.app_state['is_closing'] = True
+        self.master.quit()

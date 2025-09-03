@@ -39,14 +39,12 @@ class AreasView(ctk.CTkFrame):
         ctk.CTkButton(form_frame, text="Eliminar Seleccionada", command=self.delete_selected_area, fg_color=DARK_GRAY, hover_color=ERROR_COLOR, border_width=1, border_color=MEDIUM_GRAY).pack(fill="x", pady=5)
     
     def load_master_areas(self):
-        # ... (La lógica no cambia)
         self.master_areas_listbox.delete(0, tk.END)
         try:
             self.master_areas_data = self.supabase_client.table("areas_maestro").select("*").order("nombre_area").execute().data
             for area in self.master_areas_data: self.master_areas_listbox.insert(tk.END, area['nombre_area'])
         except Exception as e: messagebox.showerror("Error", f"No se pudo cargar: {e}")
     def add_area(self):
-        # ... (La lógica no cambia)
         new_name = self.new_area_entry.get().strip()
         if not new_name: return
         try:
@@ -54,7 +52,6 @@ class AreasView(ctk.CTkFrame):
             self.new_area_entry.delete(0, tk.END); self.load_master_areas()
         except Exception as e: messagebox.showerror("Error", f"No se pudo añadir: {e}")
     def update_selected_area(self):
-        # ... (La lógica no cambia, solo el 'parent' del simpledialog)
         selected_indices = self.master_areas_listbox.curselection()
         if not selected_indices: return
         area_id = self.master_areas_data[selected_indices[0]]['id_area_maestro']
@@ -67,7 +64,6 @@ class AreasView(ctk.CTkFrame):
                 self.load_master_areas()
             except Exception as e: messagebox.showerror("Error", f"No se pudo actualizar: {e}")
     def delete_selected_area(self):
-        # ... (La lógica no cambia)
         selected_indices = self.master_areas_listbox.curselection()
         if not selected_indices: return
         area_id = self.master_areas_data[selected_indices[0]]['id_area_maestro']
