@@ -1,14 +1,13 @@
-# src/ui/pages/proyectos_page.py (Corregido)
+# src/ui/pages/proyectos_page.py
 
 import customtkinter as ctk
 import logging
-from config import *
+from config import * # Solo para los tamaños de fuente
 
 class ProyectosPage(ctk.CTkFrame):
     def __init__(self, master, master_app, on_create_new, on_view_details, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
         
-        # Obtenemos el cliente de la ventana principal 'App'
         self.supabase_client = master_app.supabase_client
         self.on_create_new = on_create_new
         self.on_view_details = on_view_details
@@ -20,7 +19,8 @@ class ProyectosPage(ctk.CTkFrame):
         header_frame = ctk.CTkFrame(self, fg_color="transparent")
         header_frame.pack(fill="x", padx=10, pady=10)
         
-        title_label = ctk.CTkLabel(header_frame, text="Mis Proyectos", font=ctk.CTkFont(family=FONT_PRIMARY, size=FONT_SIZE_TITLE, weight="bold"))
+        # --- CORRECCIÓN DE FUENTE ---
+        title_label = ctk.CTkLabel(header_frame, text="Mis Proyectos", font=ctk.CTkFont(size=FONT_SIZE_TITLE, weight="bold"))
         title_label.pack(side="left")
         
         btn_crear_proyecto = ctk.CTkButton(header_frame, text="+ Crear Nuevo Proyecto", command=self.on_create_new, height=35)
@@ -45,8 +45,9 @@ class ProyectosPage(ctk.CTkFrame):
                     info = ctk.CTkFrame(frame, fg_color="transparent")
                     info.pack(side="left", fill="x", expand=True, padx=15)
                     
-                    ctk.CTkLabel(info, text=proyecto['nombre_proyecto'], font=ctk.CTkFont(family=FONT_PRIMARY, size=FONT_SIZE_NORMAL, weight="bold")).pack(anchor="w")
-                    ctk.CTkLabel(info, text=proyecto['direccion_proyecto'], font=ctk.CTkFont(family=FONT_PRIMARY, size=FONT_SIZE_SMALL), text_color="gray").pack(anchor="w")
+                    # --- CORRECCIÓN DE FUENTE ---
+                    ctk.CTkLabel(info, text=proyecto['nombre_proyecto'], font=ctk.CTkFont(size=FONT_SIZE_NORMAL, weight="bold")).pack(anchor="w")
+                    ctk.CTkLabel(info, text=proyecto['direccion_proyecto'], font=ctk.CTkFont(size=FONT_SIZE_SMALL), text_color="gray").pack(anchor="w")
                     
                     btn = ctk.CTkButton(frame, text="Administrar", command=lambda p=proyecto: self.on_view_details(p))
                     btn.pack(side="right", padx=15)

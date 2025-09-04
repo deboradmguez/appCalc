@@ -1,23 +1,25 @@
-# src/ui/windows/proyecto_form_window.py
-
 import customtkinter as ctk
 from tkinter import messagebox
-from config import *
+from config import * # Solo para los tamaños
 
 class ProyectoFormWindow(ctk.CTkToplevel):
     def __init__(self, master, callback, **kwargs):
         super().__init__(master, **kwargs)
         
-        self.supabase_client = master.supabase_client # Obtenemos el cliente del master
+        self.supabase_client = master.supabase_client
         self.callback = callback
         self.areas_data = []
         self.area_checkboxes = []
 
         self.title("Crear Nuevo Proyecto")
-        self.geometry("450x550")
+        alto, ancho = 600, 500
+        x = (self.winfo_screenwidth() // 2) - (ancho // 2)
+        y = (self.winfo_screenheight() // 2) - (alto // 2)
+        self.geometry(f"{ancho}x{alto}+{x}+{y}")
         self.transient(master)
 
-        title_label = ctk.CTkLabel(self, text="Detalles del Nuevo Proyecto", font=ctk.CTkFont(family=FONT_PRIMARY, size=FONT_SIZE_LARGE, weight="bold"))
+        # --- CORRECCIÓN DE FUENTE ---
+        title_label = ctk.CTkLabel(self, text="Detalles del Nuevo Proyecto", font=ctk.CTkFont(size=FONT_SIZE_LARGE, weight="bold"))
         title_label.pack(pady=20, padx=30)
 
         form_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -74,7 +76,6 @@ class ProyectoFormWindow(ctk.CTkToplevel):
                 "direccion_proyecto": direccion
             }).execute()
             nuevo_proyecto_id = proyecto_response.data[0]['id_proyecto']
-
             areas_to_link = [{"proyecto_id": nuevo_proyecto_id, "area_maestro_id": self.areas_data[index]['id_area_maestro']} for index in selected_indices]
             
             if areas_to_link:

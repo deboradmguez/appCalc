@@ -1,70 +1,91 @@
-# src/ui/main_window.py (Corregido)
-
 import customtkinter as ctk
-from tkinter import messagebox
+import logging
+from src.ui.login_window import LoginWindow
+from src.ui.main_window import MainWindow 
+from src.services.auth_service import AuthService
+from src.database.supabase_client import get_supabase_client
 
-from src.ui.components.sidebar import Sidebar
-from src.ui.pages.proyectos_page import ProyectosPage
-from src.ui.pages.project_detail_page import ProjectDetailPage
-from src.ui.pages.areas_view import AreasView
-from src.ui.pages.materiales_view import MaterialesView
-from src.ui.pages.configuracion_view import ConfiguracionView
-from src.ui.windows.proyecto_form_window import ProyectoFormWindow
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-class MainWindow(ctk.CTkFrame):
-    def __init__(self, master, **kwargs):
-        super().__init__(master, **kwargs)
+class App(ctk.CTk):
+    def __init__(self, supabase_client, auth_service):
+        super().__init__()
+        self.supabase_client = supabase_client
+        self.auth_service = auth_service
+        self.current_frame = None
+        self.close_button = None
+
+        self.title("BuildMate - Administrador de Proyectos")
+        self.attributes('-fullscreen', True)
+        self.configure(fg_color="#33375A") 
+
+        self.bind("<Escape>", self.on_closing)
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+        self.check_session()
+
+    def check_session(self):
+        try:
+            session = self.auth_service.load_session()
+            if session:
+                self.show_main_window()
+            else:
+                self.show_login_window()
+        except Exception as e:
+            logging.error(f"Error al cargar la sesión: {e}")
+            self.show_login_window()
+
+    def setup_close_button(self):
+        """Configura y muestra el botón de cerrar."""
+        if self.close_button: return
+
+        self.close_button = ctk.CTkButton(
+            self, text="X", width=30, height=30, corner_radius=15,
+            fg_color=("gray75", "#2b2b2b"), hover_color=("gray65", "#3c3c3c"),
+            text_color=("#2b2b2b", "white"), font=ctk.CTkFont(weight="bold"),
+            command=self.on_closing
+        )
+        self.close_button.place(relx=0.98, rely=0.03, anchor="ne")
+
+    def _cleanup_login_ui(self):
+        """Limpia los widgets de la pantalla de login."""
+        if self.current_frame:
+            self.current_frame.destroy()
+            self.current_frame = None
+        if self.close_button:
+            self.close_button.destroy()
+            self.close_button = None
+
+    def show_login_window(self):
+        self._cleanup_login_ui()
+        self.setup_close_button()
         
-        self.master = master
-        self.supabase_client = master.supabase_client
-        self.auth_service = master.auth_service
-        self.current_page = None 
+        self.current_frame = LoginWindow(self, auth_service=self.auth_service)
+        self.current_frame.place(relx=0.5, rely=0.5, anchor="center")
+
+    def show_main_window(self):
+        self._cleanup_login_ui()
         
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_columnconfigure(0, weight=0)
-
-        commands = {
-            "Proyectos": self.show_proyectos_page,
-            "Materiales": self.show_materiales_page,
-            "Areas": self.show_areas_page,
-            "Configuración": self.show_configuracion_page
-        }
+        self.current_frame = MainWindow(self)
+        self.current_frame.pack(fill="both", expand=True)
         
-        self.sidebar_frame = Sidebar(self, commands=commands)
-        self.sidebar_frame.grid(row=0, column=0, sticky="nsw")
+    def on_closing(self, event=None):
+        self.destroy()
 
-        self.view_container = ctk.CTkFrame(self, corner_radius=0)
-        self.view_container.grid(row=0, column=1, sticky="nsew")
-        
-        self.show_proyectos_page()
+def main():
+    ctk.set_appearance_mode("Dark")
+    ctk.set_default_color_theme("blue")
+    
+    try:
+        supabase_client = get_supabase_client()
+        auth_service = AuthService(supabase_client)
+    except ValueError as e:
+        logging.error(f"Error de conexión: {e}")
+        return
+    
+    app = App(supabase_client, auth_service)
+    app.mainloop()
 
-    def _switch_page(self, page_class, **kwargs):
-        if self.current_page:
-            self.current_page.destroy()
-        
-        # --- LA CORRECCIÓN ESTÁ AQUÍ ---
-        # Pasamos master_app (que es la ventana principal 'App') a todas las páginas.
-        # Las páginas podrán acceder a supabase_client a través de master_app.
-        self.current_page = page_class(self.view_container, master_app=self.master, **kwargs)
-        self.current_page.pack(fill="both", expand=True, padx=20, pady=20)
+if __name__ == "__main__":
+    main()
 
-    def create_new_proyecto(self):
-        form = ProyectoFormWindow(self.master, callback=self.show_proyectos_page)
-        form.grab_set()
-
-    def logout(self):
-        if messagebox.askyesno("Cerrar Sesión", "¿Estás seguro?"):
-            self.auth_service.logout()
-            self.master.show_login_window()
-
-    def show_proyectos_page(self):
-        self._switch_page(ProyectosPage, on_create_new=self.create_new_proyecto, on_view_details=self.show_project_detail_page)
-    def show_project_detail_page(self, proyecto):
-        self._switch_page(ProjectDetailPage, proyecto=proyecto, on_back=self.show_proyectos_page)
-    def show_materiales_page(self):
-        self._switch_page(MaterialesView)
-    def show_areas_page(self):
-        self._switch_page(AreasView)
-    def show_configuracion_page(self):
-        self._switch_page(ConfiguracionView, on_logout=self.logout)
