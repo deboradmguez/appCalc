@@ -6,7 +6,8 @@ from PIL import Image
 import os
 import logging
 from pathlib import Path
-from config import TRANSPARENT_BG, get_login_colors
+# CORREGIDO: Importamos TRANSPARENT_HOVER para usarlo en el botón.
+from config import TRANSPARENT_BG, TRANSPARENT_HOVER, get_login_colors
     
 colors = get_login_colors()
 
@@ -53,7 +54,6 @@ class LoginWindow(ctk.CTkFrame):
                     self, 
                     image=avatar_image, 
                     text=""
-                    # CORREGIDO: Se eliminó 'bg_color=TRANSPARENT_BG' que no es soportado por CTkLabel.
                 )
                 avatar_label.grid(row=0, column=0, pady=(25, 10))
             else:
@@ -224,7 +224,8 @@ class LoginWindow(ctk.CTkFrame):
             text="¿No tienes cuenta? Regístrate aquí.", 
             command=self.toggle_mode, 
             fg_color=TRANSPARENT_BG , 
-            hover_color=TRANSPARENT_BG ,
+            # CORREGIDO: Usamos TRANSPARENT_HOVER en lugar de TRANSPARENT_BG.
+            hover_color=TRANSPARENT_HOVER,
             text_color=self.colors['accent_text'],
             font=ctk.CTkFont(underline=True, size=12)
         )
