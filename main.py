@@ -34,8 +34,7 @@ class App(ctk.CTk):
             self.geometry(f"{WINDOW_MIN_WIDTH}x{WINDOW_MIN_HEIGHT}")
             self.center_window()
         
-        # === CONFIGURACIÓN DE TEMA ===
-        # Cambiar a tema claro para que funcione mejor con los nuevos colores
+       
         ctk.set_appearance_mode("light")
         
         # === CONFIGURACIÓN DE EVENTOS ===
