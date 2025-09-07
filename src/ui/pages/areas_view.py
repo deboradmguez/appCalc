@@ -53,8 +53,8 @@ class AreasView(ctk.CTkFrame):
         main_container.pack(fill="both", expand=True, padx=0)
         
         # Configurar grid
-        main_container.grid_columnconfigure(0, weight=2)
-        main_container.grid_columnconfigure(1, weight=1)
+        main_container.grid_columnconfigure(0, weight=2)  # Lista de áreas (más espacio)
+        main_container.grid_columnconfigure(1, weight=1)  # Panel de acciones
         main_container.grid_rowconfigure(0, weight=1)
         
         # === LEFT PANEL - AREAS LIST ===
@@ -69,6 +69,7 @@ class AreasView(ctk.CTkFrame):
         list_container = ctk.CTkFrame(parent, fg_color=TRANSPARENT_BG )
         list_container.grid(row=0, column=0, sticky="nsew", padx=(0, 15))
         
+        # Header del panel
         list_header = ctk.CTkFrame(list_container, fg_color=TRANSPARENT_BG )
         list_header.pack(fill="x", pady=(0, 15))
         
@@ -79,6 +80,7 @@ class AreasView(ctk.CTkFrame):
             text_color=self.colors['text_primary']
         ).pack(side="left")
         
+        # Contador de áreas
         self.area_count_label = ctk.CTkLabel(
             list_header,
             text="",
@@ -87,6 +89,7 @@ class AreasView(ctk.CTkFrame):
         )
         self.area_count_label.pack(side="right")
         
+        # ScrollableFrame para las áreas
         self.areas_list_frame = ctk.CTkScrollableFrame(
             list_container,
             fg_color=BACKGROUND_CARD,
@@ -108,6 +111,7 @@ class AreasView(ctk.CTkFrame):
         )
         actions_container.grid(row=0, column=1, sticky="nsew", padx=(15, 0))
         
+        # Header del panel
         actions_header = ctk.CTkLabel(
             actions_container,
             text="⚙️ Panel de Acciones",
@@ -116,6 +120,7 @@ class AreasView(ctk.CTkFrame):
         )
         actions_header.pack(pady=(25, 20))
         
+        # === SECCIÓN: NUEVA ÁREA ===
         new_area_frame = ctk.CTkFrame(actions_container, fg_color=TRANSPARENT_BG )
         new_area_frame.pack(fill="x", padx=20, pady=(0, 25))
         
@@ -126,6 +131,7 @@ class AreasView(ctk.CTkFrame):
             text_color=self.colors['text_primary']
         ).pack(anchor="w", pady=(0, 10))
         
+        # Campo de entrada mejorado
         self.new_area_entry = ctk.CTkEntry(
             new_area_frame,
             height=45,
@@ -137,8 +143,10 @@ class AreasView(ctk.CTkFrame):
         )
         self.new_area_entry.pack(fill="x", pady=(0, 10))
         
+        # Bind Enter key
         self.new_area_entry.bind("<Return>", lambda e: self.add_area())
         
+        # Botón añadir
         add_btn = ctk.CTkButton(
             new_area_frame,
             text="➕ Añadir Área",
@@ -151,9 +159,11 @@ class AreasView(ctk.CTkFrame):
         )
         add_btn.pack(fill="x")
         
+        # Separador
         separator = ctk.CTkFrame(actions_container, height=2, fg_color=BORDER_PRIMARY)
         separator.pack(fill="x", padx=20, pady=20)
         
+        # === SECCIÓN: ÁREA SELECCIONADA ===
         selected_frame = ctk.CTkFrame(actions_container, fg_color=TRANSPARENT_BG )
         selected_frame.pack(fill="x", padx=20, pady=(0, 25))
         
@@ -164,6 +174,7 @@ class AreasView(ctk.CTkFrame):
             text_color=self.colors['text_primary']
         ).pack(anchor="w", pady=(0, 10))
         
+        # Label para mostrar área seleccionada
         self.selected_area_label = ctk.CTkLabel(
             selected_frame,
             text="Ninguna área seleccionada",
@@ -176,6 +187,7 @@ class AreasView(ctk.CTkFrame):
         )
         self.selected_area_label.pack(fill="x", pady=(0, 10))
         
+        # Campo de edición
         self.edit_area_entry = ctk.CTkEntry(
             selected_frame,
             height=40,
@@ -188,6 +200,7 @@ class AreasView(ctk.CTkFrame):
         )
         self.edit_area_entry.pack(fill="x", pady=(0, 10))
         
+        # Botones de acción para área seleccionada
         buttons_frame = ctk.CTkFrame(selected_frame, fg_color=TRANSPARENT_BG )
         buttons_frame.pack(fill="x")
         
@@ -223,6 +236,7 @@ class AreasView(ctk.CTkFrame):
         )
         self.delete_btn.pack(fill="x")
         
+        # === INFORMACIÓN ADICIONAL ===
         info_frame = ctk.CTkFrame(actions_container, fg_color=TRANSPARENT_BG )
         info_frame.pack(fill="x", padx=20, pady=(25, 20), side="bottom")
         
@@ -238,12 +252,15 @@ class AreasView(ctk.CTkFrame):
     def load_master_areas(self):
         """Carga las áreas maestras desde la base de datos"""
         
+        # Limpiar lista actual
         for widget in self.areas_list_frame.winfo_children():
             widget.destroy()
         
         try:
+            # Obtener áreas de la base de datos
             self.master_areas_data = self.supabase_client.table("areas_maestro").select("*").order("nombre_area").execute().data
             
+            # Actualizar contador
             self.area_count_label.configure(text=f"({len(self.master_areas_data)} áreas)")
             
             if not self.master_areas_data:
@@ -262,7 +279,11 @@ class AreasView(ctk.CTkFrame):
         empty_frame = ctk.CTkFrame(self.areas_list_frame, fg_color=TRANSPARENT_BG )
         empty_frame.pack(fill="both", expand=True, pady=40)
         
-        ctk.CTkLabel(empty_frame, text="📦", font=ctk.CTkFont(size=60)).pack(pady=(0, 10))
+        ctk.CTkLabel(
+            empty_frame,
+            text="📦",
+            font=ctk.CTkFont(size=60)
+        ).pack(pady=(0, 10))
         
         ctk.CTkLabel(
             empty_frame,
@@ -301,19 +322,21 @@ class AreasView(ctk.CTkFrame):
     def _create_area_card(self, area):
         """Crea una tarjeta para cada área"""
         
+        # Card frame
         card_frame = ctk.CTkFrame(
             self.areas_list_frame,
-            fg_color=TRANSPARENT_BG,
+            fg_color=TRANSPARENT_BG ,
             corner_radius=8,
             border_width=2,
-            # CORREGIDO: Usar el color del fondo para que el borde sea invisible por defecto
             border_color=BACKGROUND_CARD
         )
         card_frame.pack(fill="x", pady=3, padx=15)
         
+        # Content frame
         content_frame = ctk.CTkFrame(card_frame, fg_color=TRANSPARENT_BG )
         content_frame.pack(fill="x", padx=15, pady=12)
         
+        # Área name
         name_label = ctk.CTkLabel(
             content_frame,
             text=f"🏠 {area['nombre_area']}",
@@ -323,6 +346,7 @@ class AreasView(ctk.CTkFrame):
         )
         name_label.pack(side="left", fill="x", expand=True)
         
+        # Selection indicator (initially hidden)
         selection_indicator = ctk.CTkLabel(
             content_frame,
             text="✓",
@@ -331,21 +355,23 @@ class AreasView(ctk.CTkFrame):
             width=30
         )
         
+        # Click event for selection
         def select_area(event=None):
             self._select_area(area, card_frame, selection_indicator)
         
+        # Bind click events
         card_frame.bind("<Button-1>", select_area)
         content_frame.bind("<Button-1>", select_area)
         name_label.bind("<Button-1>", select_area)
         
+        # Hover effects
         def on_enter(event):
             if card_frame != self.selected_card:
                 card_frame.configure(border_color=BORDER_PRIMARY, fg_color="#FAFAFA")
         
         def on_leave(event):
             if card_frame != self.selected_card:
-                # CORREGIDO: Usar el color del fondo para que el borde sea invisible al salir
-                card_frame.configure(border_color=BACKGROUND_CARD, fg_color=TRANSPARENT_BG)
+                card_frame.configure(border_color=BACKGROUND_CARD, fg_color=TRANSPARENT_BG )
         
         card_frame.bind("<Enter>", on_enter)
         card_frame.bind("<Leave>", on_leave)
@@ -353,12 +379,13 @@ class AreasView(ctk.CTkFrame):
     def _select_area(self, area, card_frame, selection_indicator):
         """Selecciona un área"""
         
+        # Deseleccionar área anterior
         if self.selected_card:
             self.selected_card.configure(
-                # CORREGIDO: Usar el color del fondo al deseleccionar
-                border_color=BACKGROUND_CARD, 
+                border_color=BACKGROUND_CARD , 
                 fg_color=TRANSPARENT_BG 
             )
+            # Ocultar indicador anterior
             for widget in self.selected_card.winfo_children():
                 for child in widget.winfo_children():
                     if isinstance(child, ctk.CTkFrame):
@@ -366,21 +393,34 @@ class AreasView(ctk.CTkFrame):
                             if isinstance(grandchild, ctk.CTkLabel) and grandchild.cget("text") == "✓":
                                 grandchild.pack_forget()
         
+        # Seleccionar nueva área
         self.selected_area = area
         self.selected_card = card_frame
         
-        card_frame.configure(border_color=ACCENT_PRIMARY, fg_color="#FFF7ED")
+        # Actualizar apariencia
+        card_frame.configure(
+            border_color=ACCENT_PRIMARY, 
+            fg_color="#FFF7ED"
+        )
         
+        # Mostrar indicador de selección
         selection_indicator.pack(side="right")
         
+        # Actualizar panel de acciones
         self._update_actions_panel()
 
     def _update_actions_panel(self):
         """Actualiza el panel de acciones con el área seleccionada"""
         
         if self.selected_area:
-            self.selected_area_label.configure(text=f"📋 {self.selected_area['nombre_area']}", fg_color="#E6FFFA", text_color="#047857")
+            # Actualizar label de área seleccionada
+            self.selected_area_label.configure(
+                text=f"📋 {self.selected_area['nombre_area']}",
+                fg_color="#E6FFFA",
+                text_color="#047857"
+            )
             
+            # Habilitar campo de edición y botones
             self.edit_area_entry.configure(state="normal")
             self.edit_area_entry.delete(0, "end")
             self.edit_area_entry.insert(0, self.selected_area['nombre_area'])
@@ -388,7 +428,12 @@ class AreasView(ctk.CTkFrame):
             self.edit_btn.configure(state="normal")
             self.delete_btn.configure(state="normal")
         else:
-            self.selected_area_label.configure(text="Ninguna área seleccionada", fg_color="#F3F4F6", text_color=self.colors['text_secondary'])
+            # Resetear estado
+            self.selected_area_label.configure(
+                text="Ninguna área seleccionada",
+                fg_color="#F3F4F6",
+                text_color=self.colors['text_secondary']
+            )
             
             self.edit_area_entry.configure(state="disabled")
             self.edit_area_entry.delete(0, "end")
@@ -404,17 +449,23 @@ class AreasView(ctk.CTkFrame):
             messagebox.showwarning("Advertencia", "Por favor, ingresa el nombre del área.")
             return
         
+        # Verificar si ya existe
         existing_names = [area['nombre_area'].lower() for area in self.master_areas_data]
         if new_name.lower() in existing_names:
             messagebox.showwarning("Advertencia", "Ya existe un área con ese nombre.")
             return
         
         try:
-            self.supabase_client.table("areas_maestro").insert({"nombre_area": new_name}).execute()
+            # Insertar en la base de datos
+            self.supabase_client.table("areas_maestro").insert({
+                "nombre_area": new_name
+            }).execute()
             
+            # Limpiar campo y recargar lista
             self.new_area_entry.delete(0, "end")
             self.load_master_areas()
             
+            # Mostrar mensaje de éxito
             messagebox.showinfo("Éxito", f"Área '{new_name}' añadida correctamente.")
             
         except Exception as e:
@@ -432,22 +483,39 @@ class AreasView(ctk.CTkFrame):
             messagebox.showwarning("Advertencia", "El nombre del área no puede estar vacío.")
             return
         
-        existing_names = [area['nombre_area'].lower() for area in self.master_areas_data if area['id'] != self.selected_area['id']]
+        # CORREGIDO: Usar el nombre de columna correcto de la base de datos.
+        id_column_name = 'id_area_maestro'
+        
+        # Verificar si ya existe (excluyendo el actual)
+        existing_names = [
+            area['nombre_area'].lower() 
+            for area in self.master_areas_data 
+            if area[id_column_name] != self.selected_area[id_column_name]
+        ]
         if new_name.lower() in existing_names:
             messagebox.showwarning("Advertencia", "Ya existe un área con ese nombre.")
             return
         
-        if not messagebox.askyesno("Confirmar Edición", f"¿Estás seguro de cambiar '{self.selected_area['nombre_area']}' a '{new_name}'?"):
+        # Confirmar cambio
+        if not messagebox.askyesno(
+            "Confirmar Edición", 
+            f"¿Estás seguro de cambiar '{self.selected_area['nombre_area']}' a '{new_name}'?"
+        ):
             return
         
         try:
-            self.supabase_client.table("areas_maestro").update({"nombre_area": new_name}).eq("id", self.selected_area['id']).execute()
+            # Actualizar en la base de datos
+            self.supabase_client.table("areas_maestro").update({
+                "nombre_area": new_name
+            }).eq(id_column_name, self.selected_area[id_column_name]).execute()
             
+            # Recargar lista
             self.selected_area = None
             self.selected_card = None
             self.load_master_areas()
             self._update_actions_panel()
             
+            # Mostrar mensaje de éxito
             messagebox.showinfo("Éxito", f"Área actualizada a '{new_name}'.")
             
         except Exception as e:
@@ -460,17 +528,29 @@ class AreasView(ctk.CTkFrame):
             messagebox.showwarning("Advertencia", "Selecciona un área para eliminar.")
             return
         
-        if not messagebox.askyesno("Confirmar Eliminación", f"¿Estás seguro de eliminar el área '{self.selected_area['nombre_area']}'?\n\nEsta acción no se puede deshacer."):
+        # Confirmar eliminación
+        if not messagebox.askyesno(
+            "Confirmar Eliminación", 
+            f"¿Estás seguro de eliminar el área '{self.selected_area['nombre_area']}'?\n\nEsta acción no se puede deshacer."
+        ):
             return
         
         try:
-            self.supabase_client.table("areas_maestro").delete().eq("id", self.selected_area['id']).execute()
+            # CORREGIDO: Usar el nombre de columna correcto de la base de datos.
+            id_column_name = 'id_area_maestro'
+
+            # Eliminar de la base de datos
+            self.supabase_client.table("areas_maestro").delete().eq(
+                id_column_name, self.selected_area[id_column_name]
+            ).execute()
             
+            # Recargar lista
             self.selected_area = None
             self.selected_card = None
             self.load_master_areas()
             self._update_actions_panel()
             
+            # Mostrar mensaje de éxito
             messagebox.showinfo("Éxito", "Área eliminada correctamente.")
             
         except Exception as e:
