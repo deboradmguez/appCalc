@@ -1,4 +1,4 @@
-# src/ui/main_window.py (Versión final con "cerrar al hacer clic afuera")
+# src/ui/main_window.py (Versión final con corrección en _bind_click_outside)
 
 import customtkinter as ctk
 from tkinter import messagebox
@@ -57,18 +57,24 @@ class MainWindow(ctk.CTkFrame):
         
         self.show_proyectos_page()
 
-    # NUEVO: Función recursiva para vincular el evento de clic a un widget y todos sus hijos.
     def _bind_click_outside(self, widget):
         """Vincula el evento de clic para cerrar el sidebar."""
-        # Vinculamos el widget principal
         widget.bind("<Button-1>", lambda event: self.sidebar_frame.hide())
 
-        # Vinculamos todos los widgets hijos recursivamente
         for child in widget.winfo_children():
-            # Nos aseguramos de no sobreescribir la funcionalidad de botones, entradas, etc.
-            if isinstance(child, (ctk.CTkButton, ctk.CTkEntry, ctk.CTkOptionMenu, ctk.CTkScrollableFrame, ctk.CTkTextbox, ctk.CTkSlider)):
+            # CORREGIDO: Añadimos CTkTabview y CTkSegmentedButton a la lista de widgets a ignorar.
+            if isinstance(child, (ctk.CTkButton, ctk.CTkEntry, ctk.CTkOptionMenu, 
+                                  ctk.CTkScrollableFrame, ctk.CTkTextbox, ctk.CTkSlider,
+                                  ctk.CTkTabview, ctk.CTkSegmentedButton)):
                 continue
-            self._bind_click_outside(child)
+            
+            # La vinculación recursiva puede ser problemática en widgets complejos,
+            # así que la aplicamos con más cuidado.
+            try:
+                self._bind_click_outside(child)
+            except:
+                # Si un widget hijo no soporta bind, simplemente lo ignoramos.
+                pass
 
     def _switch_page(self, page_class, **kwargs):
         for widget in self.view_container.winfo_children():
@@ -82,9 +88,7 @@ class MainWindow(ctk.CTkFrame):
         )
         current_page.pack(fill="both", expand=True)
 
-        # NUEVO: Activamos la detección de clic en la nueva página cargada.
         self._bind_click_outside(page_wrapper)
-
 
     def create_new_proyecto(self):
         form = ProyectoFormWindow(self.master, callback=self.show_proyectos_page)
